@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from .routes import router
-from .services.database import Base, engine
+from .database import Base, engine
 from .models import DBImage, DBImageModification
 
 Base.metadata.create_all(bind=engine)

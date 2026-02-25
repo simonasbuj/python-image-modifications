@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from PIL import Image
 
-from app.services.database import get_db
-from app.services.image_modifications import _get_timestamp, modify_pixel, save_image, modify_random_pixels
+from app.database import get_db
 from app.models import DBImage, DBImageModification
+from app.service import Service
 
 
 router = APIRouter(prefix="/api", tags=["Images"])
@@ -20,63 +20,21 @@ router = APIRouter(prefix="/api", tags=["Images"])
 def modify_image(
     name: str = Form(...),  # noqa: B008
     image: UploadFile = File(...),  # noqa: B008
+    variants: int = Form(100, ge=1, le=100),
     db: Session = Depends(get_db),  # noqa: B008
 ):
-    print(f"Received file: {image.filename}")
     img = Image.open(image.file)
 
-    saved_img_path = save_image(img, f"storage/{name}/{_get_timestamp()}/og.{img.format.lower()}")
+    service = Service(db, os.getenv("APP_STORAGE_BASE_PATH", "storage"))
 
-    db_img = DBImage(
-        name=name,
-        path=saved_img_path,
-    )
-
-    db.add(db_img)
-    db.flush()
-
-    # for i in range(10):
-    #     img_copy = img.copy()
-
-    #     modify_random_pixels(
-    #         img=img_copy, 
-    #         img_id=db_img.id, 
-    #         mod_number=i,
-    #         img_base_path=Path(db_img.path).parent,
-    #         img_extension=img.format.lower(),
-    #         db=db
-    #     )
-
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [
-            executor.submit(
-                modify_random_pixels,
-                img.copy(),
-                db_img.id,
-                i,
-                Path(db_img.path).parent,
-                img.format.lower(),
-                db
-            )
-            for i in range(10)
-        ]
-
-        results = []
-        for future in as_completed(futures):
-            try:
-                results.append(future.result())
-            except Exception as e:
-                print(f"Error in thread: {e}")
-        
-        for r in results:
-            db.add(r)
-
-    db.commit()
+    try:
+        service.modify_image(img, name, variants)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     return {
         "data": {
             "message": "modified",
-            "image": db_img.__dict__
         }
     }
 
