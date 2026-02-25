@@ -1,0 +1,17 @@
+services:
+  python-image-modification:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: python-image-modification
+    ports:
+      - "8000:8000"
+    environment:
+      PYTHONUNBUFFERED: 1
+    restart: unless-stopped
+    networks:
+      - python-image-modification-net
+
+networks:
+  python-image-modification-net:
+    driver: bridge

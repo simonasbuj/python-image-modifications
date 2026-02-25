@@ -1,0 +1,8 @@
+fastapi==0.132.0
+SQLAlchemy==2.0.46
+pydantic==2.12.5
+pydantic_core==2.41.5
+uvicorn==0.41.0
+python-multipart==0.0.22
+aiofiles==25.1.0
+pillow==12.1.1
