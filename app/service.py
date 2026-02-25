@@ -1,15 +1,15 @@
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import csv
 import random
-from PIL import Image
-
-from app.models import DBImage, DBImageModification
-from sqlalchemy.orm import Session
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from PIL import Image
+from sqlalchemy.orm import Session
+
+from app.models import DBImage, DBImageModification
 from app.schemas import ModifiedPixel
 from app.utils.logging import get_json_logger
+
 
 class Service:
     def __init__(self, db: Session, storage_path: str):
@@ -18,8 +18,12 @@ class Service:
 
         self.log = get_json_logger(__name__)
 
-    def modify_image(self, img: Image, name: str, variants: int = 10, max_workers: int = 10):
-        saved_img_path = self._save_image(img, f"{self.storage_path}/{name}/og.{img.format.lower()}")
+    def modify_image(
+        self, img: Image, name: str, variants: int = 10, max_workers: int = 10
+    ):
+        saved_img_path = self._save_image(
+            img, f"{self.storage_path}/{name}/og.{img.format.lower()}"
+        )
 
         db_img = DBImage(
             name=name,
@@ -36,20 +40,20 @@ class Service:
                     img.copy(),
                     db_img.id,
                     i,
-                    Path(db_img.path).parent,
+                    str(Path(db_img.path).parent),
                     img.format.lower(),
                 )
                 for i in range(variants)
             ]
 
-            results = []
+            results: list[DBImageModification] = []
             for future in as_completed(futures):
                 try:
                     results.append(future.result())
                 except Exception as e:
                     self.log.error(f"Error in thread: {e}")
                     raise
-            
+
             for r in results:
                 self.db.add(r)
 
@@ -57,14 +61,14 @@ class Service:
 
     def modify_random_pixels(
         self,
-        img: Image.Image, 
-        img_id: int, 
+        img: Image.Image,
+        img_id: int,
         variant_number: int,
         img_base_path: str,
         img_extension: str,
         min_mods: int = 100,
         max_mods: int = 200000,
-    ) -> None:
+    ) -> DBImageModification:
         img_pixels = img.width * img.height
 
         mods_amount = random.randint(min_mods, min(max_mods, img_pixels))
@@ -87,18 +91,22 @@ class Service:
 
         self._append_modification_rows(steps_file_path, rows_to_write)
         final_img = modified_pixel.img
-        saved_img_path = self._save_image(final_img, f"{img_base_path}/mod_{variant_number}.{img_extension}")
-        
+        saved_img_path = self._save_image(
+            final_img, f"{img_base_path}/mod_{variant_number}.{img_extension}"
+        )
+
         self.log.info(f"Finished modifying variant #{variant_number}")
 
         return DBImageModification(
             image_id=img_id,
             variant_number=variant_number,
             path=saved_img_path,
-            steps_file_path=str(steps_file_path)
+            steps_file_path=str(steps_file_path),
         )
-    
-    def modify_pixel(self, img: Image.Image, x: int, y: int, color: tuple = (0, 255, 0)) -> ModifiedPixel:
+
+    def modify_pixel(
+        self, img: Image.Image, x: int, y: int, color: tuple = (0, 255, 0)
+    ) -> ModifiedPixel:
         """
         Modify a single pixel in an image.
 
@@ -122,24 +130,26 @@ class Service:
         img.putpixel((x, y), color)
 
         return ModifiedPixel(
-            img=img, 
+            img=img,
             x=x,
             y=y,
             og_pixel_value=original_pixel,
             new_pixel_value=color,
         )
 
-    def _save_image(self, img: Image.Image, path: str) -> str:
+    def _save_image(self, img: Image.Image, output_path: str) -> str:
         if img.mode != "RGB":
             img = img.convert("RGB")
 
-        path = Path(path)
+        path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         img.save(path)
 
         return str(path)
-    
-    def _get_cluster_pixels(self, width: int, height: int, n: int) -> list[tuple[int, int]]:
+
+    def _get_cluster_pixels(
+        self, width: int, height: int, n: int
+    ) -> list[tuple[int, int]]:
         """
         Return n pixel coordinates that are spatially close
         by sampling a square region.
@@ -147,7 +157,7 @@ class Service:
         if n > width * height:
             raise ValueError(f"Image has less pixels than {n}")
 
-        side = int(n ** 0.5)
+        side = int(n**0.5)
 
         start_x = random.randint(0, max(0, width - side))
         start_y = random.randint(0, max(0, height - side))
@@ -171,16 +181,18 @@ class Service:
 
         with open(file_path, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow([
-                "x",
-                "y",
-                "old_r",
-                "old_g",
-                "old_b",
-                "new_r",
-                "new_g",
-                "new_b",
-            ])
+            writer.writerow(
+                [
+                    "x",
+                    "y",
+                    "old_r",
+                    "old_g",
+                    "old_b",
+                    "new_r",
+                    "new_g",
+                    "new_b",
+                ]
+            )
 
     def _append_modification_rows(self, file_path: Path, rows: list[tuple]) -> None:
         """

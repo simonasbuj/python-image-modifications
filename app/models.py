@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey, func
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -16,7 +16,7 @@ class DBImage(Base):
         "DBImageModification",
         back_populates="image",
         cascade="all, delete-orphan",
-        order_by="DBImageModification.created_at"
+        order_by="DBImageModification.created_at",
     )
 
 

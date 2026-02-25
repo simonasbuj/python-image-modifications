@@ -3,9 +3,8 @@ import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from .routes import router
 from .database import Base, engine
-from .models import DBImage, DBImageModification
+from .routes import router
 
 Base.metadata.create_all(bind=engine)
 
