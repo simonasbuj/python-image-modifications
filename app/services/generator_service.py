@@ -18,14 +18,14 @@ from app.utils.logging import get_json_logger
 
 
 class GeneratorService:
-    def __init__(self, storage_path: str):
+    def __init__(self, db: Session, storage_path: str):
+        self.db = db
         self.storage_path = storage_path
         self.log = get_json_logger(__name__)
 
     def process_uploaded_image(
         self,
         file_contents: bytes,
-        db: Session,
         modification_color: Tuple[int, int, int] = (0, 255, 0),
     ) -> UploadResponse:
         """
@@ -44,7 +44,7 @@ class GeneratorService:
         width, height = og_image.size
         max_pixels = width * height
 
-        image_record = self._create_image_record(db)
+        image_record = self._create_image_record()
 
         paths = self._prepare_storage_paths(image_record.id)
 
@@ -73,8 +73,8 @@ class GeneratorService:
                 num_modifications=modification_params["num_modifications"],
                 verification_status="pending",
             )
-            db.add(modification_record)
-            db.flush()
+            self.db.add(modification_record)
+            self.db.flush()
 
             created_modifications.append(
                 Modification(
@@ -84,7 +84,7 @@ class GeneratorService:
                 )
             )
 
-        db.commit()
+        self.db.commit()
 
         return UploadResponse(
             image_id=image_record.id,
@@ -108,7 +108,7 @@ class GeneratorService:
             image = image.convert("RGB")
         return image
 
-    def _create_image_record(self, db: Session) -> DBImage:
+    def _create_image_record(self) -> DBImage:
         """
         Create Image record in database and return it with ID assigned.
 
@@ -119,8 +119,8 @@ class GeneratorService:
             Image record with ID assigned
         """
         image_record = DBImage(original_image_path="")
-        db.add(image_record)
-        db.flush()
+        self.db.add(image_record)
+        self.db.flush()
         return image_record
 
     def _prepare_storage_paths(self, image_id: int) -> Paths:

@@ -46,7 +46,7 @@ def apply_pixel_color_modifications(
         start_x = random.randint(0, max_x)
         start_y = random.randint(0, max_y)
 
-    original_pixels = []
+    original_pixels: list[tuple[int, int, int]] = []
 
     for x in range(start_x, start_x + rect_width):
         for y in range(start_y, start_y + rect_height):

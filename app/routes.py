@@ -24,8 +24,8 @@ async def upload_image(
         contents = await file.read()
 
         result = GeneratorService(
-            os.getenv("APP_STORAGE_BASE_PATH", "storage")
-        ).process_uploaded_image(contents, db)
+            db=db, storage_path=os.getenv("APP_STORAGE_BASE_PATH", "storage")
+        ).process_uploaded_image(contents)
 
         return result
 
