@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Optional, Tuple
 
 from PIL import Image
 from pydantic import BaseModel, ConfigDict
@@ -38,3 +38,12 @@ class UploadResponse(BaseModel):
 
 class ReverseImageRequest(BaseModel):
     should_save_reversed_img: bool = False
+
+
+class ReverseModificationResponse(BaseModel):
+    modification_id: int
+    message: str
+    reversed_path: Optional[str] = None
+    original_path: str
+    modified_path: str
+    is_reversible: bool

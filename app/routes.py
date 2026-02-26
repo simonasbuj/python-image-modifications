@@ -1,11 +1,10 @@
 import os
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas import ReverseImageRequest, UploadResponse
+from app.schemas import ReverseImageRequest, ReverseModificationResponse, UploadResponse
 from app.services.generator_service import GeneratorService
 
 router = APIRouter(prefix="/api", tags=["Images"])
@@ -39,7 +38,9 @@ async def upload_image(
         raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
 
 
-@router.post("/api/reverse/{modification_id}")
+@router.post(
+    "/api/reverse/{modification_id}", response_model=ReverseModificationResponse
+)
 async def reverse_modification(
     modification_id: int,
     body: ReverseImageRequest,
@@ -61,7 +62,7 @@ async def reverse_modification(
             modification_id=modification_id,
             should_save_reversed_img=body.should_save_reversed_img,
         )
-        return JSONResponse(result)
+        return result
 
     except HTTPException:
         raise

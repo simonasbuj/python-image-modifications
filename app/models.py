@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Optional
+
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,8 +26,8 @@ class DBImageModification(Base):
     modification_algorithm = Column(String, nullable=False)
     modification_params: Mapped[str] = mapped_column(nullable=False)
     num_modifications = Column(Integer, nullable=False)
-    verification_status = Column(String, default="pending")
+    verification_status: Mapped[str] = mapped_column(default="pending")
     created_at = Column(DateTime, default=func.now())
-    verified_at = Column(DateTime, nullable=True)
+    verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     image = relationship("DBImage", back_populates="modifications")

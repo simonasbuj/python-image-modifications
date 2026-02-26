@@ -6,6 +6,7 @@ import io
 import json
 import os
 import random
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Tuple
 
@@ -14,7 +15,7 @@ from PIL import Image as PILImage
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import DBImage, DBImageModification
-from app.schemas import Modification, Paths, UploadResponse
+from app.schemas import Modification, Paths, ReverseModificationResponse, UploadResponse
 from app.services.image_processor import (
     apply_pixel_color_modifications,
     compare_images_pixelwise,
@@ -103,7 +104,7 @@ class GeneratorService:
         self,
         modification_id: int,
         should_save_reversed_img: bool = False,
-    ) -> dict[str, str]:
+    ) -> ReverseModificationResponse:
         """
         Reverse a specific modification and save the result.
 
@@ -138,19 +139,19 @@ class GeneratorService:
             reversed_image.save(reversed_path, "PNG")
 
         og_image = PILImage.open(original_path)
+        is_reversible = compare_images_pixelwise(og_image, reversed_image)
+        modification.verification_status = "true" if is_reversible else "false"
+        modification.verified_at = datetime.now(timezone.utc)
+        self.db.commit()
 
-        return {
-            "modification_id": modification_id,
-            "message": "Successfully reversed modification",
-            "reversed_path": reversed_path,
-            "original_path": original_path,
-            "modified_path": modification.modified_image_path,
-            "compare_reversed_modified": compare_images_pixelwise(
-                reversed_image, modified_image
-            ),
-            "compare_reversed_og": compare_images_pixelwise(reversed_image, og_image),
-            "compare_modified_og": compare_images_pixelwise(modified_image, og_image),
-        }
+        return ReverseModificationResponse(
+            modification_id=modification_id,
+            message="Successfully reversed modification",
+            reversed_path=reversed_path if should_save_reversed_img else None,
+            original_path=original_path,
+            modified_path=modification.modified_image_path,
+            is_reversible=is_reversible,
+        )
 
     def _load_and_validate_image(self, file_contents: bytes) -> PILImage.Image:
         """
