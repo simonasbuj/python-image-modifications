@@ -57,22 +57,20 @@ class GeneratorService:
         for variant_num in range(100):
             num_modifications = random.randint(100, min(max_pixels, 600000))
 
-            modified_image, modification_params = apply_pixel_color_modifications(
-                og_image, num_modifications, color=modification_color
+            modified_path, modification_params = self._generate_and_save_variant(
+                original_image=og_image,
+                variant_num=variant_num,
+                num_modifications=num_modifications,
+                modified_folder=paths.modified_folder,
+                modification_color=modification_color,
             )
-
-            actual_modifications = modification_params["num_modifications"]
-
-            modified_filename = f"variant_{variant_num:03d}.png"
-            modified_path = os.path.join(paths.modified_folder, modified_filename)
-            modified_image.save(modified_path, "PNG")
 
             modification_record = DBImageModification(
                 image_id=image_record.id,
                 modified_image_path=modified_path,
                 modification_algorithm=modification_params["algorithm"],
                 modification_params=json.dumps(modification_params),
-                num_modifications=actual_modifications,
+                num_modifications=modification_params["num_modifications"],
                 verification_status="pending",
             )
             db.add(modification_record)
@@ -152,3 +150,34 @@ class GeneratorService:
             reversed_folder=reversed_folder,
             og_image_path=og_image_path,
         )
+
+    def _generate_and_save_variant(
+        self,
+        original_image: PILImage.Image,
+        variant_num: int,
+        num_modifications: int,
+        modified_folder: str,
+        modification_color: Tuple[int, int, int],
+    ) -> Tuple[str, dict[str, object]]:
+        """
+        Generate a single variant, save it, and return path and modification params.
+
+        Args:
+            original_image: Original PIL Image
+            variant_num: Variant number (0-99)
+            num_modifications: Number of modifications to apply
+            modified_folder: Folder to save modified image
+            modification_color: RGB color for modifications
+
+        Returns:
+            Tuple of (modified_path, modification_params)
+        """
+        modified_image, modification_params = apply_pixel_color_modifications(
+            original_image, num_modifications, color=modification_color
+        )
+
+        modified_filename = f"variant_{variant_num:03d}.png"
+        modified_path = os.path.join(modified_folder, modified_filename)
+        modified_image.save(modified_path, "PNG")
+
+        return modified_path, modification_params
