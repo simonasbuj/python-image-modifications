@@ -47,6 +47,7 @@ class GeneratorService:
             Dictionary with image_id, message, original_image path,
             and modifications list
         """
+        self.log.info("Processing image")
         og_image = self._load_and_validate_image(file_contents)
         width, height = og_image.size
         max_pixels = width * height
@@ -62,7 +63,12 @@ class GeneratorService:
         created_modifications: list[Modification] = []
 
         for variant_num in range(100):
-            num_modifications = random.randint(100, min(max_pixels, 600000))
+            num_modifications = random.randint(100, min(max_pixels, 1000000))
+
+            self.log.info(
+                f"Creating {num_modifications} modifications, "
+                f"image_id: {image_record.id}, variant: {variant_num}"
+            )
 
             modified_path, modification_params = self._generate_and_save_variant(
                 original_image=og_image,
@@ -118,6 +124,7 @@ class GeneratorService:
         Raises:
             HTTPException: If modification not found or error occurs
         """
+        self.log.info(f"Reversing modification #{modification_id}")
         modification = self._get_modification_with_image(modification_id)
 
         original_path = modification.image.original_image_path
