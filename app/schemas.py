@@ -34,3 +34,7 @@ class UploadResponse(BaseModel):
     message: str
     original_image: str
     modifications: list[Modification]
+
+
+class ReverseImageRequest(BaseModel):
+    should_save_reversed_img: bool = False

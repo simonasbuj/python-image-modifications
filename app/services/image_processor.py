@@ -71,7 +71,7 @@ def apply_pixel_color_modifications(
 
 
 def reverse_pixel_color_modifications(
-    image: Image.Image, modification_params: Dict
+    image: Image.Image, modification_params: Dict[str, str]
 ) -> Image.Image:
     """
     Reverse pixel color modifications by restoring original pixel colors.
@@ -86,7 +86,9 @@ def reverse_pixel_color_modifications(
     img = image.copy()
     pixels = img.load()
 
-    original_pixels = modification_params.get("original_pixels", [])
+    original_pixels = modification_params.get(
+        "original_pixels", []  # type: ignore[var-annotated]
+    )
 
     for pixel_data in original_pixels:
         if isinstance(pixel_data, (list, tuple)):

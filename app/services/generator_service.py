@@ -6,14 +6,20 @@ import io
 import json
 import os
 import random
+from pathlib import Path
 from typing import Tuple
 
+from fastapi import HTTPException
 from PIL import Image as PILImage
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models import DBImage, DBImageModification
 from app.schemas import Modification, Paths, UploadResponse
-from app.services.image_processor import apply_pixel_color_modifications
+from app.services.image_processor import (
+    apply_pixel_color_modifications,
+    compare_images_pixelwise,
+    reverse_pixel_color_modifications,
+)
 from app.utils.logging import get_json_logger
 
 
@@ -92,6 +98,59 @@ class GeneratorService:
             original_image=paths.og_image_path,
             modifications=created_modifications,
         )
+
+    def reverse_modification(
+        self,
+        modification_id: int,
+        should_save_reversed_img: bool = False,
+    ) -> dict[str, str]:
+        """
+        Reverse a specific modification and save the result.
+
+        Args:
+            modification_id: ID of the modification to reverse
+            db: Database session
+
+        Returns:
+            Dictionary with modification_id, message, paths, and URLs
+
+        Raises:
+            HTTPException: If modification not found or error occurs
+        """
+        modification = self._get_modification_with_image(modification_id)
+
+        original_path = modification.image.original_image_path
+        reversed_path = self._prepare_reversed_image_path(
+            original_path, modification_id
+        )
+
+        modified_image = self._load_modified_image(modification.modified_image_path)
+
+        modification_params = self._parse_and_convert_modification_params(
+            modification.modification_params
+        )
+
+        reversed_image = reverse_pixel_color_modifications(
+            modified_image, modification_params
+        )
+
+        if should_save_reversed_img:
+            reversed_image.save(reversed_path, "PNG")
+
+        og_image = PILImage.open(original_path)
+
+        return {
+            "modification_id": modification_id,
+            "message": "Successfully reversed modification",
+            "reversed_path": reversed_path,
+            "original_path": original_path,
+            "modified_path": modification.modified_image_path,
+            "compare_reversed_modified": compare_images_pixelwise(
+                reversed_image, modified_image
+            ),
+            "compare_reversed_og": compare_images_pixelwise(reversed_image, og_image),
+            "compare_modified_og": compare_images_pixelwise(modified_image, og_image),
+        }
 
     def _load_and_validate_image(self, file_contents: bytes) -> PILImage.Image:
         """
@@ -181,3 +240,106 @@ class GeneratorService:
         modified_image.save(modified_path, "PNG")
 
         return modified_path, modification_params
+
+    def _get_modification_with_image(
+        self,
+        modification_id: int,
+    ) -> DBImageModification:
+        """
+        Get modification from database with image relationship loaded.
+
+        Args:
+            modification_id: ID of the modification
+            db: Database session
+
+        Returns:
+            ImageModification object
+
+        Raises:
+            HTTPException: If modification not found
+        """
+        modification = (
+            self.db.query(DBImageModification)
+            .options(joinedload(DBImageModification.image))
+            .filter(DBImageModification.id == modification_id)
+            .first()
+        )
+
+        if not modification:
+            raise HTTPException(
+                status_code=404, detail=f"Modification {modification_id} not found"
+            )
+
+        return modification
+
+    def _prepare_reversed_image_path(
+        self, original_path: str, modification_id: int
+    ) -> str:
+        """
+        Prepare path for reversed image.
+
+        Args:
+            image_id: ID of the image
+            modification_id: ID of the modification
+
+        Returns:
+            Tuple of (reversed_folder, reversed_path)
+        """
+        reversed_filename = f"reversed_{modification_id}.png"
+        reversed_path = os.path.join(
+            Path(original_path).parent / "reversed", reversed_filename
+        )
+
+        return reversed_path
+
+    def _load_modified_image(self, modified_image_path: str) -> PILImage.Image:
+        """
+        Load and validate modified image from path.
+
+        Args:
+            modified_image_path: Path to modified image
+
+        Returns:
+            PIL Image object in RGB mode
+
+        Raises:
+            HTTPException: If image file not found
+        """
+        if not os.path.exists(modified_image_path):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Modified image not found: {modified_image_path}",
+            )
+
+        image = PILImage.open(modified_image_path)
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        return image
+
+    def _parse_and_convert_modification_params(
+        self, modification_params_json: str
+    ) -> dict[str, str]:
+        """
+        Parse modification parameters from JSON and convert lists to tuples.
+
+        Args:
+            modification_params_json: JSON string of modification parameters
+
+        Returns:
+            Dictionary with converted modification parameters
+        """
+        modification_params = json.loads(modification_params_json)
+
+        # Convert JSON lists back to tuples (JSON converts tuples to lists)
+        original_pixels = modification_params.get("original_pixels", [])
+        if original_pixels:
+            original_pixels = [
+                (int(p[0]), int(p[1]), tuple(int(c) for c in p[2]))
+                if isinstance(p[2], list)
+                else (int(p[0]), int(p[1]), p[2])
+                for p in original_pixels
+            ]
+            modification_params["original_pixels"] = original_pixels
+
+        return modification_params
