@@ -1,35 +1,36 @@
 import os
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from PIL import Image
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.service import Service
+from app.schemas import UploadResponse
+from app.services.generator_service import GeneratorService
 
 router = APIRouter(prefix="/api", tags=["Images"])
 
 
-@router.post(
-    "/modify",
-)
-def modify_image(
-    name: str = Form(...),  # noqa: B008
-    image: UploadFile = File(...),  # noqa: B008
-    variants: int = Form(100, ge=1, le=100),  # noqa: B008
-    db: Session = Depends(get_db),  # noqa: B008
+@router.post("/upload", response_model=UploadResponse)
+async def upload_image(
+    file: UploadFile = File(...), db: Session = Depends(get_db)  # noqa: B008
 ):
-    img = Image.open(image.file)
-
-    service = Service(db, os.getenv("APP_STORAGE_BASE_PATH", "storage"))
+    """
+    Accept an image file and generate 100 variants with random modifications.
+    """
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
 
     try:
-        service.modify_image(img, name, variants)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        contents = await file.read()
 
-    return {
-        "data": {
-            "message": "modified",
-        }
-    }
+        result = GeneratorService(
+            os.getenv("APP_STORAGE_BASE_PATH", "storage")
+        ).process_uploaded_image(contents, db)
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
