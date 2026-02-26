@@ -34,16 +34,17 @@ def generator_service(tmp_path: Path, db_session: Session) -> GeneratorService:
     return GeneratorService(db=db_session, storage_path=str(tmp_path))
 
 
-def test_prepare_storage_paths(generator_service: GeneratorService) -> None:
+def test_prepare_storage_paths(generator_service: GeneratorService, tmp_path: Path) -> None:
     paths = generator_service._prepare_storage_paths(123)
 
     assert Path(paths.image_folder).is_dir()
     assert Path(paths.modified_folder).is_dir()
     assert Path(paths.reversed_folder).is_dir()
 
-    assert paths.modified_folder == os.path.join(paths.image_folder, "modified")
-    assert paths.reversed_folder == os.path.join(paths.image_folder, "reversed")
-    assert paths.og_image_path == os.path.join(paths.image_folder, "original.png")
+    assert paths.image_folder == os.path.join(tmp_path, "123")
+    assert paths.modified_folder == os.path.join(tmp_path, "123/modified")
+    assert paths.reversed_folder == os.path.join(tmp_path, "123/reversed")
+    assert paths.og_image_path == os.path.join(tmp_path, "123/original.png")
 
 
 def test_create_image_record(generator_service: GeneratorService) -> None:
