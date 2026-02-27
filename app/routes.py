@@ -1,3 +1,4 @@
+import asyncio
 import os
 from typing import Optional
 
@@ -32,9 +33,8 @@ async def upload_image(
     try:
         contents = await file.read()
 
-        result = GeneratorService(
-            db=db, storage_path=STORAGE_PATH
-        ).process_uploaded_image(contents)
+        service = GeneratorService(db=db, storage_path=STORAGE_PATH)
+        result = await asyncio.to_thread(service.process_uploaded_image, contents)
 
         return result
 
@@ -46,7 +46,7 @@ async def upload_image(
 
 
 @router.post("/reverse/{modification_id}", response_model=ReverseModificationResponse)
-async def reverse_modification(
+def reverse_modification(
     modification_id: int,
     body: ReverseImageRequest,
     db: Session = Depends(get_db),  # noqa: B008
@@ -73,7 +73,7 @@ async def reverse_modification(
 
 
 @router.get("/modifications", response_model=list[ModificationResponse])
-async def get_modifications(
+def get_modifications(
     skip: int = 0,
     limit: int = 50,
     status: Optional[str] = Query(None),  # noqa: B008

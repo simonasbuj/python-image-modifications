@@ -2,6 +2,7 @@ import os
 import time
 
 import requests
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.utils.logging import get_json_logger
 
@@ -22,7 +23,7 @@ class BackgroundValidator:
 
         while True:
             modifications = self.get_pending_modifications()
-            self.log.info(f"fetched {len(modifications)} pending modifications")
+            self.log.info(f"Fetched {len(modifications)} pending modifications")
 
             if len(modifications) > 0:
                 for m in modifications:
@@ -35,6 +36,11 @@ class BackgroundValidator:
 
             time.sleep(poll_interval)
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=2, min=10, max=20),
+        reraise=True,
+    )
     def get_pending_modifications(
         self,
         skip: int = 0,
@@ -52,11 +58,16 @@ class BackgroundValidator:
             "status": status,
         }
 
-        response = requests.get(url, params=params, timeout=10)
+        response = requests.get(url, params=params, timeout=60)
         response.raise_for_status()
 
         return response.json()
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=2, min=10, max=20),
+        reraise=True,
+    )
     def validate_modification(
         self, modification_id: int, should_save_reversed_img: bool = False
     ) -> dict[str, str]:
@@ -71,6 +82,7 @@ class BackgroundValidator:
             response = requests.post(url, json=payload, timeout=60)
             response.raise_for_status()
         except requests.RequestException as e:
+            self.log.error(f"Failed to validate modification {modification_id}: {e}")
             raise RuntimeError(
                 f"Failed to validate modification {modification_id}: {e}"
             ) from e
