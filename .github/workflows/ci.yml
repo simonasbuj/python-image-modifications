@@ -23,7 +23,7 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run tests
-        run: pytest
+        run: pytest -vv
 
   pre-commit:
     name: Run pre-commit
