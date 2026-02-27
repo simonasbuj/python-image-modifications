@@ -1,3 +1,4 @@
+import datetime as dt
 from typing import Optional, Tuple
 
 from PIL import Image
@@ -47,3 +48,14 @@ class ReverseModificationResponse(BaseModel):
     original_path: str
     modified_path: str
     is_reversible: bool
+
+
+class ModificationResponse(BaseModel):
+    id: int
+    image_id: int
+    modified_image_path: str
+    modification_algorithm: str
+    num_modifications: int
+    verification_status: str
+    created_at: dt.datetime
+    verified_at: Optional[dt.datetime]

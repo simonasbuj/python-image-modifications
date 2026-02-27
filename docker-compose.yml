@@ -12,6 +12,18 @@ services:
     networks:
       - python-image-modification-net
 
+  python-backround-modification-validation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: python-backround-modification-validation
+    environment:
+      PYTHONUNBUFFERED: 1
+    command: ["python", "-m", "app.services.background_validator"]
+    restart: unless-stopped
+    networks:
+      - python-image-modification-net
+
 networks:
   python-image-modification-net:
     driver: bridge

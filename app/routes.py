@@ -1,10 +1,17 @@
 import os
+from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from sqlalchemy.orm import Session, joinedload, load_only
 
 from app.database import get_db
-from app.schemas import ReverseImageRequest, ReverseModificationResponse, UploadResponse
+from app.models import DBImageModification
+from app.schemas import (
+    ModificationResponse,
+    ReverseImageRequest,
+    ReverseModificationResponse,
+    UploadResponse,
+)
 from app.services.generator_service import GeneratorService
 
 router = APIRouter(prefix="/api", tags=["Images"])
@@ -38,9 +45,7 @@ async def upload_image(
         raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
 
 
-@router.post(
-    "/api/reverse/{modification_id}", response_model=ReverseModificationResponse
-)
+@router.post("/reverse/{modification_id}", response_model=ReverseModificationResponse)
 async def reverse_modification(
     modification_id: int,
     body: ReverseImageRequest,
@@ -70,3 +75,33 @@ async def reverse_modification(
         raise HTTPException(
             status_code=500, detail=f"Error reversing modification: {str(e)}"
         )
+
+
+@router.get("/modifications", response_model=list[ModificationResponse])
+async def get_modifications(
+    skip: int = 0,
+    limit: int = 50,
+    status: Optional[str] = Query(None),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
+):
+    """Get list of modifications."""
+    print(status)
+    query = db.query(DBImageModification).options(
+        load_only(
+            DBImageModification.id,
+            DBImageModification.image_id,
+            DBImageModification.modified_image_path,
+            DBImageModification.num_modifications,
+            DBImageModification.verification_status,
+            DBImageModification.created_at,
+            DBImageModification.verified_at,
+        ),
+        joinedload(DBImageModification.image),
+    )
+
+    if status:
+        query = query.filter(DBImageModification.verification_status == status)
+
+    modifications = query.offset(skip).limit(limit).all()
+
+    return modifications
