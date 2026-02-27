@@ -1,4 +1,5 @@
 import os
+import json
 from pathlib import Path
 from typing import Iterator
 
@@ -127,3 +128,54 @@ def test_get_modification_with_image_not_found(
         generator_service._get_modification_with_image(non_existent_id)
 
     assert exc_info.value.status_code == 404
+
+def test_prepare_reversed_image_path(generator_service: GeneratorService, tmp_path: Path) -> None:
+    image_dir = tmp_path / "123"
+    reversed_dir = image_dir / "reversed"
+
+    original_path = str(image_dir / "original.png")
+    modification_id = 42
+
+    out_path = generator_service._prepare_reversed_image_path(original_path, modification_id)
+
+    expected = os.path.join(str(reversed_dir), f"reversed_{modification_id}.png")
+    assert out_path == expected
+
+
+def test_load_modified_image_ok_converts_to_rgb(generator_service: GeneratorService, tmp_path: Path) -> None:
+    img = PILImage.new("RGBA", (10, 10), (255, 0, 0, 128))
+    img_path = tmp_path / "modified.png"
+    img.save(img_path, "PNG")
+
+    loaded = generator_service._load_modified_image(str(img_path))
+
+    assert isinstance(loaded, PILImage.Image)
+    assert loaded.mode == "RGB"
+    assert loaded.size == (10, 10)
+
+
+def test_load_modified_image_missing_raises_404(generator_service: GeneratorService, tmp_path: Path) -> None:
+    missing_path = tmp_path / "does_not_exist.png"
+
+    with pytest.raises(HTTPException) as exc:
+        generator_service._load_modified_image(str(missing_path))
+
+    assert exc.value.status_code == 404
+    assert "Modified image not found" in exc.value.detail
+
+def test_parse_and_convert_modification_params(generator_service: GeneratorService) -> None:
+    payload: dict[str, object] = {
+        "algorithm": "pixel_color",
+        "original_pixels": [
+            [10, 20, [255, 1, 2]],
+            [11, 21, [1, 255, 2]],
+        ],
+    }
+    params_json = json.dumps(payload)
+
+    out = generator_service._parse_and_convert_modification_params(params_json)
+
+    assert out["algorithm"] == "pixel_color"
+    assert isinstance(out["original_pixels"], list)
+    assert out["original_pixels"][0] == (10, 20, (255, 1, 2))
+    assert out["original_pixels"][1] == (11, 21, (1, 255, 2))

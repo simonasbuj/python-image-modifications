@@ -339,7 +339,6 @@ class GeneratorService:
         """
         modification_params = json.loads(modification_params_json)
 
-        # Convert JSON lists back to tuples (JSON converts tuples to lists)
         original_pixels = modification_params.get("original_pixels", [])
         if original_pixels:
             original_pixels = [
