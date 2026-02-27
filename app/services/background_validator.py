@@ -8,8 +8,8 @@ from app.utils.logging import get_json_logger
 
 
 class BackgroundValidator:
-    def __init__(self):
-        self.api_endpoint = os.getenv("APP_API_ENDPOINT", "").rstrip("/")
+    def __init__(self, api_endpoint: str):
+        self.api_endpoint = api_endpoint
         self.log = get_json_logger("app.services.BackgroundValidator")
 
         if not self.api_endpoint:
@@ -91,4 +91,6 @@ class BackgroundValidator:
 
 
 if __name__ == "__main__":
-    BackgroundValidator().run()
+    BackgroundValidator( 
+        api_endpoint=os.getenv("APP_API_ENDPOINT", "").rstrip("/")
+    ).run()
