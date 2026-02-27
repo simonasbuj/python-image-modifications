@@ -1,16 +1,82 @@
+import os
 import time
+
+import requests
 
 from app.utils.logging import get_json_logger
 
 
-def background_task(poll_interval: int = 5):
-    log = get_json_logger("app.background_validator")
+class BackgroundValidator:
+    def __init__(self):
+        self.api_endpoint = os.getenv("APP_API_ENDPOINT", "").rstrip("/")
+        self.log = get_json_logger("app.services.BackgroundValidator")
 
-    log.info(f"Polling database every {poll_interval} seconds")
-    while True:
-        log.info("hi")
-        time.sleep(poll_interval)
+        if not self.api_endpoint:
+            raise ValueError("APP_API_ENDPOINT is not set")
+
+    def run(self, poll_interval: int = 5) -> None:
+        self.log.info(
+            f"Polling database every {poll_interval} seconds"
+            f"using api {self.api_endpoint}"
+        )
+
+        while True:
+            modifications = self.get_pending_modifications()
+            self.log.info(f"fetched {len(modifications)} pending modifications")
+
+            if len(modifications) > 0:
+                for m in modifications:
+                    id = int(m.get("id", ""))
+
+                    response = self.validate_modification(id)
+                    is_reversible = response.get("is_reversible")
+
+                    self.log.info(f"Verified mod {id}, is_reversible: {is_reversible}")
+
+            time.sleep(poll_interval)
+
+    def get_pending_modifications(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        status: str = "pending",
+    ) -> list[dict[str, int | str]]:
+        """
+        Fetches pending modifications from api.
+        """
+        url = f"{self.api_endpoint}/api/modifications"
+
+        params: dict[str, int | str] = {
+            "skip": skip,
+            "limit": limit,
+            "status": status,
+        }
+
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+
+        return response.json()
+
+    def validate_modification(
+        self, modification_id: int, should_save_reversed_img: bool = False
+    ) -> dict[str, str]:
+        """
+        Calls POST /api/reverse/{modification_id}
+        """
+        url = f"{self.api_endpoint}/api/reverse/{modification_id}"
+
+        payload = {"should_save_reversed_img": should_save_reversed_img}
+
+        try:
+            response = requests.post(url, json=payload, timeout=60)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            raise RuntimeError(
+                f"Failed to validate modification {modification_id}: {e}"
+            ) from e
+
+        return response.json()
 
 
 if __name__ == "__main__":
-    background_task()
+    BackgroundValidator().run()

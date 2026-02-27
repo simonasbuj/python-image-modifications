@@ -52,13 +52,8 @@ async def reverse_modification(
     db: Session = Depends(get_db),  # noqa: B008
 ):
     """
-    Reverse a specific modification by ID and save the result to the reverses folder.
-
-    Args:
-        modification_id: ID of the modification to reverse
-
-    Returns:
-        JSON response with the path to the reversed image
+    Reverse a specific modification by ID
+    and optionally save the result to the reversed folder.
     """
     try:
         result = GeneratorService(
