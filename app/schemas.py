@@ -48,3 +48,13 @@ class ModificationResponse(BaseModel):
     verification_status: str
     created_at: dt.datetime
     verified_at: Optional[dt.datetime]
+
+
+class ImageListResponse(BaseModel):
+    id: int
+    original_image_path: str
+    created_at: dt.datetime
+
+
+class ImageDetailResponse(ImageListResponse):
+    modifications: list[ModificationResponse]

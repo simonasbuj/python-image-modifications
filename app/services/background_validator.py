@@ -72,9 +72,9 @@ class BackgroundValidator:
         self, modification_id: int, should_save_reversed_img: bool = False
     ) -> dict[str, str]:
         """
-        Calls POST /api/reverse/{modification_id}
+        Calls POST /api/modifications/{modification_id}/reverse/
         """
-        url = f"{self.api_endpoint}/api/reverse/{modification_id}"
+        url = f"{self.api_endpoint}/api/modifications/{modification_id}/reverse/"
 
         payload = {"should_save_reversed_img": should_save_reversed_img}
 

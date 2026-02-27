@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, DateTime, ForeignKey, func
+from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -12,7 +12,7 @@ class DBImage(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     original_image_path: Mapped[str] = mapped_column(nullable=False)
-    created_at = Column(DateTime, default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
     modifications = relationship("DBImageModification", back_populates="image")
 
