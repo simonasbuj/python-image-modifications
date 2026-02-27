@@ -19,7 +19,7 @@ run-validator:
 	python -m app.services.background_validator
 
 test:
-	pytest
+	pytest -vv
 
 pre-commit:
 	pre-commit run --all-files

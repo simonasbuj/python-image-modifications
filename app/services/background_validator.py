@@ -91,6 +91,6 @@ class BackgroundValidator:
 
 
 if __name__ == "__main__":
-    BackgroundValidator( 
+    BackgroundValidator(
         api_endpoint=os.getenv("APP_API_ENDPOINT", "").rstrip("/")
     ).run()
