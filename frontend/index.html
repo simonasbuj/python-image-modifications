@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="icon.png">
+  <title>Python Image Modifications</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
+  <script defer type="module" src="index.js"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.15.2/dist/cdn.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container my-5" x-cloak x-data="indexApp()" x-init="init()">
+     <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <h2 class="mb-3">Upload Image</h2>
+      <form @submit.prevent="uploadImage">
+  <div class="mb-3">
+    <label for="imageFile" class="form-label">Select an image</label>
+    <input
+      type="file"
+      id="imageFile"
+      class="form-control"
+      accept="image/*"
+      x-ref="fileInput"
+    >
+  </div>
+  <button type="submit" class="btn btn-primary" :disabled="isUploading">
+    <span x-show="!isUploading" x-cloak>Upload</span>
+    <span x-show="isUploading" x-cloak>
+      <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      Uploading…
+    </span>
+  </button>
+</form>
+    </div>
+  </div>
+
+  <h2 class="mb-3">Images</h2>
+  <div class="row row-cols-1 row-cols-md-3 g-3">
+    <template x-for="img in images" :key="img.id">
+      <div class="col">
+        <a :href="'details.html?id=' + img.id" class="text-decoration-none text-reset">
+          <div class="card h-100 shadow-sm">
+            <img :src="'/' + img.original_image_path" class="card-img-top" alt="Image not found">
+            <div class="card-body">
+              <p class="mb-1 text-muted fs-6"><strong>ID:</strong> <span x-text="img.id"></span></p>
+              <p class="mb-0 text-muted fs-6"><strong>Created:</strong> <span x-text="img.created_at"></span></p>
+            </div>
+          </div>
+        </a>
+      </div>
+    </template>
+  </div>
+
+  <template x-if="images.length === 0">
+    <div class="alert alert-info mt-3" role="alert">
+      No images yet. Upload one to get started.
+    </div>
+  </template>
+</body>
+</html>
