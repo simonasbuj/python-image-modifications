@@ -40,11 +40,10 @@ class GeneratorService:
 
         Args:
             file_contents: Raw image file contents
-            db: Database session
             modification_color: RGB color for modifications (default: green)
 
         Returns:
-            Dictionary with image_id, message, original_image path,
+            UploadResponse with image_id, message, original_image path,
             and modifications list
         """
         self.log.info("Processing image")
@@ -112,17 +111,16 @@ class GeneratorService:
         should_save_reversed_img: bool = False,
     ) -> ReverseModificationResponse:
         """
-        Reverse a specific modification and save the result.
+        Reverse a specific modification and optionally save the result.
 
         Args:
             modification_id: ID of the modification to reverse
-            db: Database session
+            should_save_reversed_img: Whether to save the reversed image to disk
 
         Returns:
-            Dictionary with modification_id, message, paths, and URLs
-
-        Raises:
-            HTTPException: If modification not found or error occurs
+            ReverseModificationResponse with modification_id, message,
+            original_path, modified_path, optional reversed_path,
+            and is_reversible flag
         """
         self.log.info(f"Reversing modification #{modification_id}")
         modification = self._get_modification_with_image(modification_id)
