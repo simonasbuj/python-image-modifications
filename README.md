@@ -17,7 +17,7 @@ Build and start all services:
 docker compose up --build
 ```
 
-API docs available at: http://localhost:8000/docs
+API docs available at: http://localhost:8000/docs  
 Frontend available at: http://localhost:8000/frontend
 
 ### UI
