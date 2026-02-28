@@ -4,7 +4,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import desc
-from sqlalchemy.orm import Session, load_only, selectinload
+from sqlalchemy.orm import Session, defer, load_only, selectinload
 
 from app.database import get_db
 from app.models import DBImage, DBImageModification
@@ -140,8 +140,8 @@ async def get_image_details(
     image = (
         db.query(DBImage)
         .options(
-            selectinload(DBImage.modifications).defer(
-                DBImageModification.modification_params
+            selectinload(DBImage.modifications).options(
+                defer(DBImageModification.modification_params, raiseload=True)
             )
         )
         .filter(DBImage.id == image_id)

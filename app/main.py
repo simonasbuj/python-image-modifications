@@ -15,7 +15,13 @@ os.makedirs(storage_path, exist_ok=True)
 
 app.mount(
     f"/{storage_path}",
-    StaticFiles(directory=os.getenv("APP_STORAGE_BASE_PATH", storage_path)),
+    StaticFiles(directory=storage_path),
     name=storage_path,
+)
+
+app.mount(
+    "/frontend",
+    StaticFiles(directory="frontend", html=True),
+    name="frontend",
 )
 app.include_router(router)
