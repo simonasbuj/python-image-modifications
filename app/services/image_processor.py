@@ -1,3 +1,4 @@
+import hashlib
 import random
 from typing import Any
 
@@ -139,3 +140,28 @@ def compare_images_pixelwise(img1: Image.Image, img2: Image.Image) -> bool:
                 return False
 
     return True
+
+
+def image_hash(img: Image.Image, algorithm: str = "sha256") -> str:
+    """
+    Compute a cryptographic hash of an image's raw pixel data.
+    """
+    img_bytes = img.tobytes()
+
+    hasher = hashlib.new(algorithm)
+    hasher.update(img_bytes)
+
+    return hasher.hexdigest()
+
+
+def compare_images_by_hash(img1: Image.Image, img2: Image.Image) -> bool:
+    """
+    Compare two images using a cryptographic hash.
+
+    Returns:
+        True if images are identical, False otherwise
+    """
+    if img1.size != img2.size:
+        return False
+
+    return image_hash(img1) == image_hash(img2)

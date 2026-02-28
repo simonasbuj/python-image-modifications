@@ -4,6 +4,7 @@ import pytest
 from PIL import Image
 
 from app.services.image_processor import (
+    compare_images_by_hash,
     compare_images_pixelwise,
     compute_modification_region,
     reverse_pixel_color_modifications,
@@ -77,3 +78,27 @@ def test_reverse_pixel_color_modifications_single() -> None:
 
     assert reversed_img.getpixel((3, 4)) == (255, 0, 0)
     assert reversed_img.getpixel((0, 0)) == (255, 0, 0)
+
+
+@pytest.mark.parametrize(
+    "color1,size1,color2,size2,expected",
+    [
+        ((255, 0, 0), (10, 10), (255, 0, 0), (10, 10), True),
+        ((255, 0, 0), (10, 10), (255, 0, 0), (5, 5), False),
+        ((255, 0, 0), (10, 10), (0, 255, 0), (10, 10), False),
+    ],
+    ids=["identical", "different_size", "different_pixels"],
+)
+def test_compare_image_by_hash(
+    color1: tuple[int, int, int],
+    size1: tuple[int, int],
+    color2: tuple[int, int, int],
+    size2: tuple[int, int],
+    expected: bool,
+) -> None:
+    img1 = Image.new("RGB", size1, color1)
+    img2 = Image.new("RGB", size2, color2)
+
+    result = compare_images_by_hash(img1, img2)
+
+    assert result == expected
