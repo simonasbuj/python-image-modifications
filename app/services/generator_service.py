@@ -18,7 +18,7 @@ from app.models import DBImage, DBImageModification
 from app.schemas import Modification, Paths, ReverseModificationResponse, UploadResponse
 from app.services.image_processor import (
     apply_pixel_color_modifications,
-    compare_images_pixelwise,
+    compare_images_by_hash,
     reverse_pixel_color_modifications,
 )
 from app.utils.logging import get_json_logger
@@ -146,7 +146,9 @@ class GeneratorService:
             reversed_image.save(reversed_path, "PNG")
 
         og_image = PILImage.open(original_path)
-        is_reversible = compare_images_pixelwise(og_image, reversed_image)
+        # is_reversible = compare_images_pixelwise(og_image, reversed_image)
+        is_reversible = compare_images_by_hash(og_image, reversed_image)
+
         modification.verification_status = "true" if is_reversible else "false"
         modification.verified_at = datetime.now(timezone.utc)
         self.db.commit()
