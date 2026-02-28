@@ -1,5 +1,5 @@
 import random
-from typing import Dict, Tuple
+from typing import Any
 
 from PIL import Image
 
@@ -7,8 +7,8 @@ from PIL import Image
 def apply_pixel_color_modifications(
     image: Image.Image,
     num_modifications: int,
-    color: Tuple[int, int, int] = (0, 255, 0),
-) -> Tuple[Image.Image, Dict[str, object]]:
+    color: tuple[int, int, int] = (0, 255, 0),
+) -> tuple[Image.Image, dict[str, object]]:
     """
     Apply reversible pixel color modifications.
     Changes a large square region of pixels to a specified color (default: green)
@@ -25,28 +25,12 @@ def apply_pixel_color_modifications(
     img = image.copy()
     width, height = img.size
     pixels = img.load()
-    total_pixels = width * height
 
-    num_modifications = min(num_modifications, total_pixels)
+    start_x, start_y, rect_width, rect_height = compute_modification_region(
+        width, height, num_modifications
+    )
 
-    side_length = int(num_modifications**0.5)
-
-    side_length = min(side_length, width, height)
-
-    rect_width = side_length
-    rect_height = side_length
-
-    max_x = width - rect_width
-    max_y = height - rect_height
-
-    if max_x < 0 or max_y < 0:
-        start_x, start_y = 0, 0
-        rect_width, rect_height = width, height
-    else:
-        start_x = random.randint(0, max_x)
-        start_y = random.randint(0, max_y)
-
-    original_pixels: list[tuple[int, int, int]] = []
+    original_pixels = []
 
     for x in range(start_x, start_x + rect_width):
         for y in range(start_y, start_y + rect_height):
@@ -71,7 +55,7 @@ def apply_pixel_color_modifications(
 
 
 def reverse_pixel_color_modifications(
-    image: Image.Image, modification_params: Dict[str, str]
+    image: Image.Image, modification_params: dict[str, Any]
 ) -> Image.Image:
     """
     Reverse pixel color modifications by restoring original pixel colors.
@@ -105,16 +89,35 @@ def reverse_pixel_color_modifications(
     return img
 
 
-def calculate_image_hash(image: Image.Image) -> str:
+def compute_modification_region(
+    width: int,
+    height: int,
+    num_modifications: int,
+) -> tuple[int, int, int, int]:
     """
-    Calculate a simple hash of the image for comparison.
-    Uses pixel values to create a hash.
-    """
-    import hashlib
+    Compute the modification region as a square inside the image.
 
-    pixels = list(image.getdata())
-    pixel_str = str(pixels)
-    return hashlib.md5(pixel_str.encode()).hexdigest()
+    Returns:
+        (start_x, start_y, rect_width, rect_height)
+    """
+    total_pixels = width * height
+    num_modifications = min(num_modifications, total_pixels)
+
+    side_length = int(num_modifications**0.5)
+    side_length = min(side_length, width, height)
+
+    rect_width = side_length
+    rect_height = side_length
+
+    max_x = width - rect_width
+    max_y = height - rect_height
+
+    if max_x <= 0 or max_y <= 0:
+        return 0, 0, width, height
+
+    start_x = random.randint(0, max_x)
+    start_y = random.randint(0, max_y)
+    return start_x, start_y, rect_width, rect_height
 
 
 def compare_images_pixelwise(img1: Image.Image, img2: Image.Image) -> bool:

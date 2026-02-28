@@ -15,8 +15,11 @@ run-api:
 run-api-watch:
 	uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+run-validator:
+	python -m app.services.background_validator
+
 test:
-	pytest
+	pytest -vv
 
 pre-commit:
 	pre-commit run --all-files

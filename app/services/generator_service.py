@@ -8,7 +8,7 @@ import os
 import random
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Tuple
+from typing import Any
 
 from fastapi import HTTPException
 from PIL import Image as PILImage
@@ -33,7 +33,7 @@ class GeneratorService:
     def process_uploaded_image(
         self,
         file_contents: bytes,
-        modification_color: Tuple[int, int, int] = (0, 255, 0),
+        modification_color: tuple[int, int, int] = (0, 255, 0),
     ) -> UploadResponse:
         """
         Process an uploaded image and generate 100 variants.
@@ -224,8 +224,8 @@ class GeneratorService:
         variant_num: int,
         num_modifications: int,
         modified_folder: str,
-        modification_color: Tuple[int, int, int],
-    ) -> Tuple[str, dict[str, object]]:
+        modification_color: tuple[int, int, int],
+    ) -> tuple[str, dict[str, object]]:
         """
         Generate a single variant, save it, and return path and modification params.
 
@@ -327,7 +327,7 @@ class GeneratorService:
 
     def _parse_and_convert_modification_params(
         self, modification_params_json: str
-    ) -> dict[str, str]:
+    ) -> dict[str, Any]:
         """
         Parse modification parameters from JSON and convert lists to tuples.
 
@@ -339,7 +339,6 @@ class GeneratorService:
         """
         modification_params = json.loads(modification_params_json)
 
-        # Convert JSON lists back to tuples (JSON converts tuples to lists)
         original_pixels = modification_params.get("original_pixels", [])
         if original_pixels:
             original_pixels = [

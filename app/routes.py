@@ -1,12 +1,16 @@
+import asyncio
 import os
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from sqlalchemy.orm import Session, joinedload, load_only
+from sqlalchemy import desc
+from sqlalchemy.orm import Session, load_only, selectinload
 
 from app.database import get_db
-from app.models import DBImageModification
+from app.models import DBImage, DBImageModification
 from app.schemas import (
+    ImageDetailResponse,
+    ImageListResponse,
     ModificationResponse,
     ReverseImageRequest,
     ReverseModificationResponse,
@@ -19,7 +23,7 @@ router = APIRouter(prefix="/api", tags=["Images"])
 STORAGE_PATH = os.getenv("APP_STORAGE_BASE_PATH", "storage")
 
 
-@router.post("/upload", response_model=UploadResponse)
+@router.post("/images", response_model=UploadResponse)
 async def upload_image(
     file: UploadFile = File(...), db: Session = Depends(get_db)  # noqa: B008
 ):
@@ -32,9 +36,8 @@ async def upload_image(
     try:
         contents = await file.read()
 
-        result = GeneratorService(
-            db=db, storage_path=STORAGE_PATH
-        ).process_uploaded_image(contents)
+        service = GeneratorService(db=db, storage_path=STORAGE_PATH)
+        result = await asyncio.to_thread(service.process_uploaded_image, contents)
 
         return result
 
@@ -45,20 +48,18 @@ async def upload_image(
         raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
 
 
-@router.post("/reverse/{modification_id}", response_model=ReverseModificationResponse)
-async def reverse_modification(
+@router.post(
+    "/modifications/{modification_id}/reverse/",
+    response_model=ReverseModificationResponse,
+)
+def reverse_modification(
     modification_id: int,
     body: ReverseImageRequest,
     db: Session = Depends(get_db),  # noqa: B008
 ):
     """
-    Reverse a specific modification by ID and save the result to the reverses folder.
-
-    Args:
-        modification_id: ID of the modification to reverse
-
-    Returns:
-        JSON response with the path to the reversed image
+    Reverse a specific modification by ID
+    and optionally save the result to the reversed folder.
     """
     try:
         result = GeneratorService(
@@ -78,7 +79,7 @@ async def reverse_modification(
 
 
 @router.get("/modifications", response_model=list[ModificationResponse])
-async def get_modifications(
+def get_modifications(
     skip: int = 0,
     limit: int = 50,
     status: Optional[str] = Query(None),  # noqa: B008
@@ -96,7 +97,6 @@ async def get_modifications(
             DBImageModification.created_at,
             DBImageModification.verified_at,
         ),
-        joinedload(DBImageModification.image),
     )
 
     if status:
@@ -105,3 +105,50 @@ async def get_modifications(
     modifications = query.offset(skip).limit(limit).all()
 
     return modifications
+
+
+@router.get("/images", response_model=list[ImageListResponse])
+def get_images(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),  # noqa: B008
+):
+    query = (
+        db.query(DBImage)
+        .options(
+            load_only(
+                DBImage.id,
+                DBImage.original_image_path,
+                DBImage.created_at,
+            )
+        )
+        .order_by(desc(DBImage.created_at))
+    )
+
+    images = query.offset(skip).limit(limit).all()
+    return images
+
+
+@router.get("/images/{image_id}", response_model=ImageDetailResponse)
+async def get_image_details(
+    image_id: int,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> DBImage:
+    """
+    Get details for a specific image, including all its associated modifications.
+    """
+    image = (
+        db.query(DBImage)
+        .options(
+            selectinload(DBImage.modifications).defer(
+                DBImageModification.modification_params
+            )
+        )
+        .filter(DBImage.id == image_id)
+        .first()
+    )
+
+    if not image:
+        raise HTTPException(status_code=404, detail=f"Image {image_id} not found")
+
+    return image

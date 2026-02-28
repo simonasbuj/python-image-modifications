@@ -1,18 +1,7 @@
 import datetime as dt
-from typing import Optional, Tuple
+from typing import Optional
 
-from PIL import Image
 from pydantic import BaseModel, ConfigDict
-
-
-class ModifiedPixel(BaseModel):
-    img: Image.Image
-    x: int
-    y: int
-    og_pixel_value: Tuple[int, int, int]
-    new_pixel_value: Tuple[int, int, int]
-
-    model_config = {"arbitrary_types_allowed": True}
 
 
 class Paths(BaseModel):
@@ -59,3 +48,13 @@ class ModificationResponse(BaseModel):
     verification_status: str
     created_at: dt.datetime
     verified_at: Optional[dt.datetime]
+
+
+class ImageListResponse(BaseModel):
+    id: int
+    original_image_path: str
+    created_at: dt.datetime
+
+
+class ImageDetailResponse(ImageListResponse):
+    modifications: list[ModificationResponse]
