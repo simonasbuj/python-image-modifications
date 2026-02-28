@@ -1,7 +1,9 @@
+import { raiseForStatus } from './utils.js';
+
 function detailsApp() {
   return {
     image: null,
-    baseUrl: "",
+    error: null,
 
     async init() {
 
@@ -15,10 +17,11 @@ function detailsApp() {
 
         try {
             const res = await fetch(`/api/images/${id}`)
-            const resJson = await this.raiseForStatus(res)
+            const resJson = await raiseForStatus(res)
             this.image = resJson
         } catch(err) {
-            console.error("failed to fetch image details: ", err)
+            this.error = err
+            console.log(this.error)
         }
     },
 
@@ -27,21 +30,7 @@ function detailsApp() {
         this.orderId = params.get("id")
         return this.orderId
     },
-
-    async raiseForStatus(res) {
-        if (!res.ok) {
-            let message;
-            try {
-                const data = await res.json();
-                message = data?.message || JSON.stringify(data);
-            } catch {
-                message = await res.text();
-            }
-            throw new Error(`HTTP ${res.status}: ${message}`);
-        }
-
-        const data = await res.json()
-        return data;
-    },
   }
 }
+
+window.detailsApp = detailsApp
